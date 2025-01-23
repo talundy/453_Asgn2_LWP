@@ -6,6 +6,10 @@
 #include <unistd.h>
 #include <sys/types.h>
 
+#include "fp.h"
+#include "lwp.h"
+#include "util.h"
+
 
 tid_t lwp_create(lwpfun function, void *argument){
 
