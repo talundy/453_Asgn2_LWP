@@ -36,9 +36,6 @@ thread rr_next(void){
 }
 
 int rr_qlen(void){
-<<<<<<< HEAD
-
-=======
     int count = 0;
     if(HEAD == NULL){
         return 0;
@@ -50,5 +47,4 @@ int rr_qlen(void){
         count++;
     }
     return count;
->>>>>>> ba338d7 (qlen())
 }
