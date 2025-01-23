@@ -18,7 +18,7 @@ tid_t lwp_create(lwpfun function, void *argument){
     // create thread
     // add thread to scheduler
 
-    // execve function(argument) for the thread
+    // function(argument) for the thread
 }
 
 
