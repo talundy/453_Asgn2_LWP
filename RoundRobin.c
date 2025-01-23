@@ -60,4 +60,15 @@ thread rr_next(void){
 }
 
 int rr_qlen(void){
+    int count = 0;
+    if(HEAD == NULL){
+        return 0;
+    }
+    count++;
+    thread thr = HEAD->next;
+    while(thr != HEAD){
+        thr = thr->next;
+        count++;
+    }
+    return count;
 }
