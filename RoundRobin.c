@@ -60,5 +60,4 @@ thread rr_next(void){
 }
 
 int rr_qlen(void){
-
 }
