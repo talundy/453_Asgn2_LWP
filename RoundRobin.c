@@ -42,7 +42,6 @@ void rr_remove(thread victim){
         // Change prev and next pointers
         victim->prev->next = victim->next;
         victim->next->prev = victim->prev;
-
     }
 }
 
