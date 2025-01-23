@@ -29,9 +29,20 @@ void rr_admit(thread new){
 
 void rr_remove(thread victim){
     if(victim != NULL){
+        // If victim is the only thread in the pool
+        if((victim->next == victim) && (victim->prev == victim)){
+            // Preferred convention for a single thread pool
+            HEAD = NULL;
+            return;
+        } elif ((victim->next == NULL) && (victim->prev == NULL)){
+            // Convention is this should never happen
+            HEAD = NULL;
+            return;
+        }
         // Change prev and next pointers
         victim->prev->next = victim->next;
         victim->next->prev = victim->prev;
+
     }
 }
 
