@@ -7,6 +7,7 @@ CFLAGS = -Wall -g -fpic
 INC = -I ./include
 
 LIBDIR = lib64
+
 LIB = $(LIBDIR)/liblwp.so
 
 

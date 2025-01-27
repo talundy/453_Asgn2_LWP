@@ -84,13 +84,43 @@ next process to run. Transfers all threads from the old scheduler
 to the new one in next() order. If scheduler is NULL the library
 should return to round-robin scheduling
 */
-void lwp_set_scheduler(tid_t tid){
+void lwp_set_scheduler(scheduler sched){
+    if((void *)tid == NULL){
+        // return to round-robin scheduling
+        struct scheduler rr_publish = {
+                NULL, NULL, rr_admit, rr_remove, rr_next, rr_qlen
+        };
+        current_scheduler = rr_publish;
+        return;
+    }
+    // Initialize the scheduler if applicable
+    if(sched->init != NULL){
+        sched->init();
+    }
+    // Transfer threads from old scheduler to new scheduler
+    thread next_thread = current_scheduler->next();
+    current_scheduler->remove(next_thread);
+    HEAD = next_thread;     // set global HEAD to next_thread
+    sched->admit(next_thread);
 
+    while(next_thread != NULL){
+        next_thread = current_scheduler->next();
+        sched->admit(next_thread);
+        // we need to remove() so that this NULL check works
+        current_scheduler->remove(next_thread);
+    }
+    // shutdown current scheduler if applicable
+    if(current_scheduler->shutdown != NULL){
+        current_scheduler->shutdown();
+    }
+    // replace old scheduler with new scheduler
+    current_scheduler = sched;
 }
 
 /*
 Returns the pointer to the current scheduler.
 */
 scheduler lwp_get_scheduler(void){
-    
+    // global pointer
+    return current_scheduler;
 }
