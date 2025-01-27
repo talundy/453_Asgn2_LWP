@@ -5,8 +5,11 @@
 #include <sys/mman.h>
 #include <unistd.h>
 #include <sys/types.h>
-#include "include/*.h"
+#include "lwp.h"
+#include "fp.h"
+#include "schedulers.h"
 
+extern void swap_rfiles(rfile* old, rfile* new);
 
 /*
 Creates a new lightweight process which executes the given function
