@@ -40,7 +40,7 @@ void rr_remove(thread victim){
             // Preferred convention for a single thread pool
             HEAD = NULL;
             return;
-        } elif ((victim->next == NULL) && (victim->prev == NULL)){
+        } else if ((victim->next == NULL) && (victim->prev == NULL)){
             // Convention is this should never happen
             HEAD = NULL;
             return;
