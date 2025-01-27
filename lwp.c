@@ -16,8 +16,9 @@ or NO THREAD if the thread cannot be created
 */
 tid_t lwp_create(lwpfun function, void *argument){
     // create thread
+    // use mmap to make space for the thread's memory
+    // void* mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_STACK, -1, 0);
     // add thread to scheduler
-
     // function(argument) for the thread
 }
 
