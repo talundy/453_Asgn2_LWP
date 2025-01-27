@@ -7,6 +7,11 @@
 
 thread HEAD = NULL;
 
+/* Initialize the scheduler to the default */
+scheduler current_scheduler = {
+    NULL, NULL, rr_admit(), rr_remove(), rr_next(), rr_qlen()
+};
+
 void rr_admit(thread new){
     if(new == NULL){
         return;
@@ -53,9 +58,7 @@ thread rr_next(void){
     if((HEAD->next == HEAD) || (HEAD->next == NULL)){
         return HEAD;
     }
-    // Assign HEAD->next as HEAD and return the former head
-    HEAD = HEAD->next;  // revise later
-    return HEAD->prev;
+    return HEAD; // convention is the HEAD is the next thread to run
 }
 
 int rr_qlen(void){
