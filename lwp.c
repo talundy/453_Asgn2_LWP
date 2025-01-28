@@ -1,21 +1,30 @@
 //
 // Created by Thomas on 1/22/25.
 //
-#include <stdio.h>
-#include <sys/mman.h>
-#include <unistd.h>
+#include <sys/mman.h>       // mmap, munmap
+#include <sys/resource.h>   // getrlimit
 #include <sys/types.h>
+#include <stdio.h>
+#include <unistd.h>         // sysconf
 #include "lwp.h"
 #include "fp.h"
 #include "schedulers.h"
 #include "RoundRobin.h"
 
 
+#define DOES_NOT_EXIST  0
+#define EIGHT_MB        8*1024*1024
+// align x to the nearest multiple of 16
+#define align(x)        ((x+15)&~15)
+
+void calculate_stack_size(void);
+
 // extern void swap_rfiles(rfile* old, rfile* new);
 scheduler current_scheduler;
 tid_t next_tid;
 unsigned long* stack_base;
-long pg_size;
+// init to 0 so we can check if it has been calculated
+long page_size, stack_size = 0;
 
 
 
@@ -27,28 +36,37 @@ lwp create() returns the (lightweight) thread id of the new thread
 or NO THREAD if the thread cannot be created
 */
 tid_t lwp_create(lwpfun function, void *argument){
+    // calculate stack size if it hasn't been done yet
+    calculate_stack_size();
+
     if(current_scheduler == NULL || current_scheduler->rr_qlen() == 0){
         lwp_start();
     }
     // create thread
     // use mmap to make space for the thread's memory
-    thread new = (thread)mmap(NULL, pg_size, PROT_READ|PROT_WRITE, 
+    thread new = (thread)mmap(NULL, stack_size, PROT_READ|PROT_WRITE,
             MAP_PRIVATE|MAP_ANONYMOUS|MAP_STACK, -1, 0);
     if(new == MAP_FAILED){
         fprintf(stderr, "New thread memory allocation failed.\n");
     }
-    new->tid = next_id;
-    new->stack = ((uint8_t*)new)+sizeof(struct threadinfo_st)/*+ TODO: ALIGNMENT*/;
-    new->stacksize = pg_size - sizeof(struct threadinfo_st) /* - TODO: ALIGNMENT*/;
-    new->state = ?????;
+    new->tid = next_tid;
+
+    // set up the stack ptr
+    new->stack = ((unsigned long*)new)+sizeof(context);
+            // align
+    new->stack = align(new->stack);
+    new->stacksize = stack_size - sizeof(context); //TODO: account for alignment
+    // save current registers into new->state
+    new->state = swap_rfiles(new->state, NULL);
     new->status = LWP_LIVE;
     //TODO: lib_one, lib_two, sched_one, sched_two, exited are configured
     // in RoundRobin.h
     // void* mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_STACK, -1, 0);
+
     // add thread to scheduler
     rr_admit(new);
     // function(argument) for the thread
-    next_id += 1;
+    next_tid += 1;
 }
 
 
@@ -57,7 +75,7 @@ Starts the LWP system. Converts the calling thread into a LWP
 and lwp yield()s to whichever thread the scheduler chooses.
 */
 void lwp_start(void){
-    //TODO: sysconf & getrlimit to find page size
+
     current_scheduler = {NULL, NULL, rr_admit, rr_remove, rr_next, rr_qlen};
     next_tid = 1;
     //TODO: Init stack_base
@@ -152,4 +170,27 @@ Returns the pointer to the current scheduler.
 scheduler lwp_get_scheduler(void){
     // global pointer
     return current_scheduler;
+}
+
+void calculate_stack_size(void){
+    // if the stack size has already been calculated, return
+    if (stack_size != 0){
+        return;
+    }
+    // gets the page size
+    if((long page_size = sysconf(_SC_PAGE_SIZE)) == -1){
+        fprintf(stderr, "sysconf failed.\n");
+    }
+    // get the stack resource limit, if it exists
+    struct rlimit rlimit = getrlimit(RLIMIT_STACK, &rlimit);
+    // check the *soft* limit
+    if((rlimit.rlim_cur == RLIM_INFINITY) || (rlimit.rlim_cur == DOES_NOT_EXIST)){
+        // if the soft limit is infinite or DNE, set the stack size to 8MB
+        stack_size = EIGHT_MB;
+    } else {
+        // otherwise, use the soft limit
+        stack_size = rlimit.rlim_cur;
+    }
+    // use int truncation to get a stack size that is a multiple of the page size
+    stack_size = (stack_size/page_size)*page_size;
 }
