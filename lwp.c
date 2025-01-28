@@ -12,9 +12,9 @@
 
 
 // extern void swap_rfiles(rfile* old, rfile* new);
+struct scheduler cur_sched;
 scheduler current_scheduler;
 tid_t next_tid;
-unsigned long* stack_base;
 long pg_size;
 
 
@@ -38,17 +38,18 @@ tid_t lwp_create(lwpfun function, void *argument){
         fprintf(stderr, "New thread memory allocation failed.\n");
     }
     new->tid = next_id;
-    new->stack = ((uint8_t*)new)+sizeof(struct threadinfo_st)/*+ TODO: ALIGNMENT*/;
+    new->stack = (unsigned long*)new/*+ TODO: ALIGNMENT*/;
     new->stacksize = pg_size - sizeof(struct threadinfo_st) /* - TODO: ALIGNMENT*/;
-    new->state = ?????;
+    new->state.fxsave = FPU_INIT;
     new->status = LWP_LIVE;
     //TODO: lib_one, lib_two, sched_one, sched_two, exited are configured
     // in RoundRobin.h
     // void* mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_STACK, -1, 0);
     // add thread to scheduler
-    rr_admit(new);
+    current_scheduler->admit(new);
     // function(argument) for the thread
     next_id += 1;
+    return new->tid;
 }
 
 
@@ -58,9 +59,17 @@ and lwp yield()s to whichever thread the scheduler chooses.
 */
 void lwp_start(void){
     //TODO: sysconf & getrlimit to find page size
-    current_scheduler = {NULL, NULL, rr_admit, rr_remove, rr_next, rr_qlen};
+    cur_sched = {NULL, NULL, rr_admit, rr_remove, rr_next, rr_qlen};
+    current_scheduler = &cur_sched;
     next_tid = 1;
-    //TODO: Init stack_base
+    //transform calling thread into an LWP but don't allocate a new stack
+    thread first_th = (thread)mmap(NULL, sizeof(struct threadinfo_st),
+            PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_STACK, -1, 0);
+    if(first_th = MAP_FAILED){
+        fprintf(stderr, "First thread memory allocation failed\n");
+        
+        
+    }
 }
 
 /*
