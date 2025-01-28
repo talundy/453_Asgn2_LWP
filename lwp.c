@@ -57,7 +57,7 @@ tid_t lwp_create(lwpfun function, void *argument){
     new->stack = align(new->stack);
     new->stacksize = stack_size - sizeof(context); //TODO: account for alignment
     // save current registers into new->state
-    new->state = swap_rfiles(new->state, NULL);
+    swap_rfiles(new->state, NULL);
     new->status = LWP_LIVE;
     //TODO: lib_one, lib_two, sched_one, sched_two, exited are configured
     // in RoundRobin.h
@@ -88,7 +88,13 @@ that thread’s context, and returns. If there is no next thread, ter-
 minates the program.
 */
 void lwp_yield(void){
-    
+    // Save the current LWP's context
+    swap_rfiles(NULL, HEAD->state);
+    // Pick the next one
+    HEAD = current_scheduler->next();
+    // Restore the next thread's context
+    swap_rfiles(HEAD->state, NULL);
+    // Return
 }
 
 /*
@@ -114,7 +120,10 @@ tid_t lwp_wait(int *status){
 Returns the tid of the calling LWP or NO THREAD if not called by a LWP.
 */
 tid_t lwp_gettid(void){
-
+    if(HEAD == NULL){
+        return NO_THREAD;
+    }
+    return HEAD->tid;
 }
 
 /*
@@ -122,7 +131,19 @@ Returns the thread corresponding to the given thread ID, or NULL
 if the ID is invalid
 */
 thread tid2thread(tid_t tid){
-
+    if(tid == NO_THREAD){
+        return NULL;
+    }
+    // iterate through the list of threads
+    thread current = HEAD;
+    while(current != NULL){
+        if(current->tid == tid){
+            return current;
+        }
+        current = current->next;
+        // does not account for nonzero invalid thread
+    }
+    return NULL;
 }
 
 /*
