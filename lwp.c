@@ -8,8 +8,17 @@
 #include "lwp.h"
 #include "fp.h"
 #include "schedulers.h"
+#include "RoundRobin.h"
 
-extern void swap_rfiles(rfile* old, rfile* new);
+
+// extern void swap_rfiles(rfile* old, rfile* new);
+scheduler current_scheduler;
+tid_t next_tid;
+unsigned long* stack_base;
+long pg_size;
+
+
+
 
 /*
 Creates a new lightweight process which executes the given function
@@ -18,11 +27,28 @@ lwp create() returns the (lightweight) thread id of the new thread
 or NO THREAD if the thread cannot be created
 */
 tid_t lwp_create(lwpfun function, void *argument){
+    if(current_scheduler == NULL || current_scheduler->rr_qlen() == 0){
+        lwp_start();
+    }
     // create thread
     // use mmap to make space for the thread's memory
+    thread new = (thread)mmap(NULL, pg_size, PROT_READ|PROT_WRITE, 
+            MAP_PRIVATE|MAP_ANONYMOUS|MAP_STACK, -1, 0);
+    if(new == MAP_FAILED){
+        fprintf(stderr, "New thread memory allocation failed.\n");
+    }
+    new->tid = next_id;
+    new->stack = ((uint8_t*)new)+sizeof(struct threadinfo_st)/*+ TODO: ALIGNMENT*/;
+    new->stacksize = pg_size - sizeof(struct threadinfo_st) /* - TODO: ALIGNMENT*/;
+    new->state = ?????;
+    new->status = LWP_LIVE;
+    //TODO: lib_one, lib_two, sched_one, sched_two, exited are configured
+    // in RoundRobin.h
     // void* mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_STACK, -1, 0);
     // add thread to scheduler
+    rr_admit(new);
     // function(argument) for the thread
+    next_id += 1;
 }
 
 
@@ -31,7 +57,10 @@ Starts the LWP system. Converts the calling thread into a LWP
 and lwp yield()s to whichever thread the scheduler chooses.
 */
 void lwp_start(void){
-
+    //TODO: sysconf & getrlimit to find page size
+    current_scheduler = {NULL, NULL, rr_admit, rr_remove, rr_next, rr_qlen};
+    next_tid = 1;
+    //TODO: Init stack_base
 }
 
 /*
