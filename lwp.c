@@ -149,20 +149,18 @@ Returns the thread corresponding to the given thread ID, or NULL
 if the ID is invalid
 */
 thread tid2thread(tid_t tid){
-    //TODO: use lib_one, lib_two for global thread list instead
+    //use lib_one, lib_two for global thread list instead
     // in order to capture zombie threads
-    //
     if(tid == NO_THREAD){
         return NULL;
     }
     // iterate through the list of threads
-    thread current = HEAD;
+    thread current = LWP_HEAD;
     while(current != NULL){
         if(current->tid == tid){
             return current;
         }
-        current = current->sched_one;
-        // does not account for nonzero invalid thread
+        current = current->lib_one;
     }
     return NULL;
 }
