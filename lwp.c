@@ -11,6 +11,8 @@
 #include "schedulers.h"
 #include "RoundRobin.h"
 
+//TODO: make this shit fucking work
+
 // struct
 struct scheduler cur_sched;
 // pointer to the current scheduler
