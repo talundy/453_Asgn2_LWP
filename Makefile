@@ -1,28 +1,40 @@
-.PHONY: clean lwp
-# Makefile for my malloc implementation for intro to operating systems
+.PHONY: clean intel-all
 
 CC = gcc
 
 CFLAGS = -Wall -g -fpic
 
-lwp: 
+INC = -I ./include
 
-intel-all: lib64/liblwp.so
+LIBDIR = lib64
 
-lib64/liblwp.so: lib64 lwp64.o
-	$(CC) $(CFLAGS) -shared -o $@ lwp64.o
+LIB = $(LIBDIR)/liblwp.so
 
-lib:
-	mkdir lib
 
-magic64.o:
-	$(CC) $(CFLAGS) -o magic64.o -c magic64.S
+SRCS = lwp.c ./include/magic64.S RoundRobin.c
+OBJS = $(SRCS:.c=.o)
+OBJS := $(OBJS:.S=.o)
 
-lib64:
-	mkdir lib64
 
-lwp64.o: lwp.c
-	$(CC) $(CFLAGS) -m64 -c -o lwp64.o
+# Default target
+intel-all: $(LIB)
+
+
+$(LIB): $(OBJS) | $(LIBDIR)
+	$(CC) $(CFLAGS) $(INC) -shared -o $@ $(OBJS)
+
+./include/magic64.o: ./include/magic64.S
+	$(CC) $(CFLAGS) $(INC) -c $< -o $@
+
+RoundRobin.o: RoundRobin.c
+	$(CC) $(CFLAGS) $(INC) -c $< -o $@
+
+lwp.o: lwp.c
+	$(CC) $(CFLAGS) $(INC) -m64 -c $< -o $@
+
+$(LIBDIR):
+	mkdir -p $@
 
 clean:
-	rm -rf lib lib64 lwp32.o lwp64.o
+	rm -f $(OBJS) $(LIB)
+	rm -rf $(LIBDIR)

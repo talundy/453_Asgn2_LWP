@@ -1,11 +1,19 @@
 //
 // Created by Thomas on 1/22/25.
 //
-
+#include <stdlib.h>
+#include <unistd.h>
 #include "RoundRobin.h"
 #include "lwp.h"
 
+// this is the head for all thread pools
 thread HEAD = NULL;
+void rr_admit(thread new);
+void rr_remove(thread victim);
+void rr_next();
+void rr_qlen();
+/* Initialize the scheduler to the default */
+
 
 /* Initialize the scheduler to the default */
 scheduler current_scheduler = {
@@ -39,7 +47,7 @@ void rr_remove(thread victim){
             // Preferred convention for a single thread pool
             HEAD = NULL;
             return;
-        } elif ((victim->next == NULL) && (victim->prev == NULL)){
+        } else if ((victim->next == NULL) && (victim->prev == NULL)){
             // Convention is this should never happen
             HEAD = NULL;
             return;
@@ -58,7 +66,7 @@ thread rr_next(void){
     if((HEAD->next == HEAD) || (HEAD->next == NULL)){
         return HEAD;
     }
-    return HEAD; // convention is the HEAD is the next thread to run
+    return HEAD->next; // convention is the HEAD current lwp
 }
 
 int rr_qlen(void){
