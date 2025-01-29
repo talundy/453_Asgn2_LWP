@@ -15,6 +15,11 @@ void rr_qlen();
 /* Initialize the scheduler to the default */
 
 
+/* Initialize the scheduler to the default */
+scheduler current_scheduler = {
+    NULL, NULL, rr_admit(), rr_remove(), rr_next(), rr_qlen()
+};
+
 void rr_admit(thread new){
     if(new == NULL){
         return;
