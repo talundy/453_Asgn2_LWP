@@ -13,6 +13,7 @@
 
 
 // extern void swap_rfiles(rfile* old, rfile* new);
+struct scheduler cur_sched;
 scheduler current_scheduler;
 // global pointer to the head of all threads (for finding zombies)
 thread LWP_HEAD;
@@ -20,6 +21,7 @@ tid_t next_tid;
 unsigned long* stack_base;
 // init to 0 so we can check if it has been calculated
 long page_size, stack_size = 0;
+
 
 
 
@@ -58,6 +60,7 @@ tid_t lwp_create(lwpfun function, void *argument){
     new->stacksize = stack_size - sizeof(context);
     // save current registers into new->state
     swap_rfiles(new->state, NULL);
+    new->state.fxsave = FPU_INIT;
     new->status = LWP_LIVE;
     //TODO: lib_one, lib_two, sched_one, sched_two, exited are configured
     // in RoundRobin.h
@@ -67,6 +70,7 @@ tid_t lwp_create(lwpfun function, void *argument){
     current_scheduler->admit(new);
     // function(argument) for the thread
     next_tid += 1;
+    return new->tid;
 }
 
 
@@ -75,12 +79,21 @@ Starts the LWP system. Converts the calling thread into a LWP
 and lwp yield()s to whichever thread the scheduler chooses.
 */
 void lwp_start(void){
-
+    //TODO: figure out who's right here
     current_scheduler = {
             NULL, NULL, rr_admit, rr_remove, rr_next, rr_qlen
     };
+    //cur_sched = {NULL, NULL, rr_admit, rr_remove, rr_next, rr_qlen};
+    //current_scheduler = &cur_sched;
     next_tid = 1;
-    //TODO: Init stack_base
+    //transform calling thread into an LWP but don't allocate a new stack
+    thread first_th = (thread)mmap(NULL, sizeof(struct threadinfo_st),
+            PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_STACK, -1, 0);
+    if(first_th = MAP_FAILED){
+        fprintf(stderr, "First thread memory allocation failed\n");
+        
+        
+    }
 }
 
 /*
