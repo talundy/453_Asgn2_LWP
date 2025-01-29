@@ -6,6 +6,7 @@
 #include "RoundRobin.h"
 #include "lwp.h"
 
+// this is the head for all thread pools
 thread HEAD = NULL;
 void rr_admit(thread new);
 void rr_remove(thread victim);
@@ -60,7 +61,7 @@ thread rr_next(void){
     if((HEAD->next == HEAD) || (HEAD->next == NULL)){
         return HEAD;
     }
-    return HEAD; // convention is the HEAD is the next thread to run
+    return HEAD->next; // convention is the HEAD current lwp
 }
 
 int rr_qlen(void){
