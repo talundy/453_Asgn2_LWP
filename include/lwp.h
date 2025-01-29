@@ -8,6 +8,19 @@
 #ifndef FALSE
 #define FALSE 0
 #endif
+/* ----- OUR ADDITIONS ----- */
+#define lwp_next lib_one
+#define lwp_prev lib_two
+#define DOES_NOT_EXIST  0
+#define EIGHT_MB        8*1024*1024
+// align x to the nearest multiple of 16
+#define align(x)        ((x+15)&~15)
+
+void calculate_stack_size(void);
+void add_thread_to_list(thread new);
+thread find_thread_by_tid(tid_t tid);
+
+/* ----- END OUR ADDITIONS ----- */
 
 
 #if defined(__x86_64)
