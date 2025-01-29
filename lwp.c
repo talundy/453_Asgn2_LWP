@@ -11,13 +11,15 @@
 #include "schedulers.h"
 #include "RoundRobin.h"
 
-
-// extern void swap_rfiles(rfile* old, rfile* new);
+// struct
 struct scheduler cur_sched;
+// pointer to the current scheduler
 scheduler current_scheduler;
 // global pointer to the head of all threads (for finding zombies)
 thread LWP_HEAD;
-tid_t next_tid;
+// global pointer to the current thread, for scheduling
+thread HEAD;
+tid_t next_tid = 1;
 unsigned long* stack_base;
 // init to 0 so we can check if it has been calculated
 long page_size, stack_size = 0;
@@ -52,12 +54,12 @@ tid_t lwp_create(lwpfun function, void *argument){
 
     // set up the stack ptr
     new->stack = ((unsigned long*)new)+sizeof(context);
-            // align
-    new->stack = align(new->stack);
+            // cast to integer for alignment
+    new->stack = (unsigned long*)align(((uintptr_t)new->stack));
     //TODO: account for alignment
     new->stacksize = stack_size - sizeof(context);
     // save current registers into new->state
-    swap_rfiles(new->state, NULL);
+    swap_rfiles(&(new->state), NULL);
     new->state.fxsave = FPU_INIT;
     new->status = LWP_LIVE;
     //TODO: lib_one, lib_two, sched_one, sched_two, exited are configured
@@ -77,17 +79,15 @@ Starts the LWP system. Converts the calling thread into a LWP
 and lwp yield()s to whichever thread the scheduler chooses.
 */
 void lwp_start(void){
-    //TODO: figure out who's right here
-    current_scheduler = {
+    struct scheduler cur_sched = {
             NULL, NULL, rr_admit, rr_remove, rr_next, rr_qlen
     };
-    //cur_sched = {NULL, NULL, rr_admit, rr_remove, rr_next, rr_qlen};
-    //current_scheduler = &cur_sched;
+    current_scheduler = &cur_sched;
     next_tid = 1;
     //transform calling thread into an LWP but don't allocate a new stack
     thread first_th = (thread)mmap(NULL, sizeof(struct threadinfo_st),
             PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_STACK, -1, 0);
-    if(first_th = MAP_FAILED){
+    if(first_th == MAP_FAILED){
         fprintf(stderr, "First thread memory allocation failed\n");
         
         
@@ -102,11 +102,11 @@ minates the program.
 */
 void lwp_yield(void){
     // Save the current LWP's context
-    swap_rfiles(NULL, HEAD->state);
+    swap_rfiles(NULL, &(HEAD->state));
     // Pick the next one
     HEAD = current_scheduler->next();
     // Restore the next thread's context
-    swap_rfiles(HEAD->state, NULL);
+    swap_rfiles(&(HEAD->state), NULL);
     // Return
 }
 
@@ -127,7 +127,7 @@ Returns the tid of the terminated thread or NO THREAD.
 */
 tid_t lwp_wait(int *status){
     // how to determine if a thread has terminated?
-
+    return NO_THREAD;
 }
 
 
@@ -159,7 +159,7 @@ thread tid2thread(tid_t tid){
         if(current->tid == tid){
             return current;
         }
-        current = current->next;
+        current = current->sched_one;
         // does not account for nonzero invalid thread
     }
     return NULL;
@@ -172,12 +172,12 @@ to the new one in next() order. If scheduler is NULL the library
 should return to round-robin scheduling
 */
 void lwp_set_scheduler(scheduler sched){
-    if((void *)tid == NULL){
+    if((void *)sched == NULL){
         // return to round-robin scheduling
         struct scheduler rr_publish = {
                 NULL, NULL, rr_admit, rr_remove, rr_next, rr_qlen
         };
-        current_scheduler = rr_publish;
+        current_scheduler = &rr_publish;
         return;
     }
     // Initialize the scheduler if applicable
@@ -218,11 +218,15 @@ void calculate_stack_size(void){
         return;
     }
     // gets the page size
-    if((long page_size = sysconf(_SC_PAGE_SIZE)) == -1){
+    if((page_size = sysconf(_SC_PAGE_SIZE)) == -1){
         fprintf(stderr, "sysconf failed.\n");
     }
     // get the stack resource limit, if it exists
-    struct rlimit rlimit = getrlimit(RLIMIT_STACK, &rlimit);
+    struct rlimit rlimit;
+    int result = getrlimit(RLIMIT_STACK, &rlimit);
+    if(result != 0){
+        fprintf(stderr, "getrlimit failed.\n");
+    }
     // check the *soft* limit
     if((rlimit.rlim_cur == RLIM_INFINITY)
     || (rlimit.rlim_cur == DOES_NOT_EXIST)){
@@ -244,10 +248,10 @@ void add_thread_to_list(thread new){
         return;
     }else{
         thread current = LWP_HEAD;
-        while(current->next != NULL){
-            current = current->next;
+        while(current->sched_one != NULL){
+            current = current->sched_one;
         }
-        current->next = new;
+        current->sched_one = new;
     }
 }
 
@@ -260,7 +264,7 @@ thread find_thread_by_tid(tid_t tid){
         if(current->tid == tid){
             return current;
         }
-        current = current->next;
+        current = current->sched_one;
     }
     return NULL;
 }

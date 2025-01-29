@@ -7,8 +7,6 @@
 
 #include "lwp.h"
 
-#define next sched_one
-#define prev sched_two
 
 
 // admit new thread to the pool
